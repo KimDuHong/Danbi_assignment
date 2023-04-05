@@ -12,15 +12,14 @@
 ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=Swagger&logoColor=white)
 
 
-> ### API DOC
+> ### API DOC ( /swagger, /redoc )
 > <div>
 > <img width="49%" alt="image" src="https://user-images.githubusercontent.com/125422608/230111674-3a322203-e910-4054-bc27-e4295d6085d0.png">
 > <img width="49%" alt="image" src="https://user-images.githubusercontent.com/125422608/230112442-bac9fa17-bfed-45df-a7ad-93bcfd6730f0.png">
 > </div>
 > 
 
-/swagger
-
-/redoc
-
-
+> ### Test
+``` bash
+$ python manage.py test
+```
