@@ -52,7 +52,6 @@ class TaskSerializer(ModelSerializer):
         team = validated_data.get("team", instance.team and instance.team.name)
         if team:
             instance.team = get_object_or_404(Team, name=team)
-
         subtasks = validated_data.get("subtasks", instance.subtasks)
         if subtasks != None:
             if not isinstance(subtasks, list):
@@ -71,6 +70,6 @@ class TaskSerializer(ModelSerializer):
                 if instance.subtasks.count() == 0 and instance.team == None:
                     raise ParseError("최소 한개의 팀이 필요합니다.")
 
-                instance.save()
+        instance.save()
 
         return instance
