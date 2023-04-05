@@ -9,6 +9,7 @@ class Team(models.Model):
         철로 = "철로"
         땅이 = "땅이"
         해테 = "해태"
+        수피 = "수피"
 
     name = models.CharField(
         max_length=10,

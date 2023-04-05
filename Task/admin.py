@@ -21,7 +21,10 @@ class TaskAdmin(admin.ModelAdmin):
     )
 
     def subtasks(self, obj):
-        return ", ".join([subtask.team.name for subtask in obj.subtasks.all()])
+        if obj.subtasks:
+            return ", ".join([subtask.team.name for subtask in obj.subtasks.all()])
+        else:
+            return ""
 
     subtasks.short_description = "Subtasks"
 

@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 # Create your models here.
 class TaskStatusModel(models.Model):
     is_complete = models.BooleanField(default=False)
-    completed_date = models.DateField(null=True, blank=True)
+    completed_date = models.DateField(null=True, blank=True, editable=False)
 
     class Meta:
         abstract = True
@@ -29,9 +29,8 @@ class SubTask(TaskStatusModel, CommonModel):
     )
     team = models.ForeignKey(
         Team,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.CASCADE,
+        related_name="subtasks",
     )
 
     def __str__(self) -> str:

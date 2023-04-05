@@ -49,25 +49,28 @@ class TaskSerializer(ModelSerializer):
         instance.title = validated_data.get("title", instance.title)
         instance.content = validated_data.get("content", instance.content)
         instance.is_complete = validated_data.get("is_complete", instance.is_complete)
-        team = validated_data.get("team", instance.team.name)
-
+        team = validated_data.get("team", instance.team and instance.team.name)
         if team:
             instance.team = get_object_or_404(Team, name=team)
 
         subtasks = validated_data.get("subtasks", instance.subtasks)
-        if subtasks:
+        if subtasks != None:
             if not isinstance(subtasks, list):
                 raise ParseError("subtasks must be list")
 
             # 단 해당 하위업무(SubTask)가 완료되었다면 삭제되지 않아야 합니다.
-            current_subtasks = instance.subtasks.filter(is_complete=False)
-            for subtask in current_subtasks:
-                subtask.delete()
+            with transaction.atomic():
+                current_subtasks = instance.subtasks.filter(is_complete=False)
+                for subtask in current_subtasks:
+                    subtask.delete()
 
-            for subtask_data in subtasks:
-                sub_team = get_object_or_404(Team, name=subtask_data)
-                SubTask.objects.create(task=instance, team=sub_team)
+                for subtask_data in subtasks:
+                    sub_team = get_object_or_404(Team, name=subtask_data)
+                    SubTask.objects.create(task=instance, team=sub_team)
 
-        instance.save()
+                if instance.subtasks.count() == 0 and instance.team == None:
+                    raise ParseError("최소 한개의 팀이 필요합니다.")
+
+                instance.save()
 
         return instance
