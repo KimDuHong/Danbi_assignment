@@ -7,37 +7,50 @@ from Team.models import Team
 
 
 class TestTask(APITestCase):
-    # /tasks/
+    # /tasks/ GET POST
     URL = "/api/v1/tasks/"
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         print("Test Task View & Create")
-        self.TITLE = "Task Test"
-        self.CONTENT = "Task Test"
-        self.upload_user = User.objects.create(username="Test User")
+        cls.TITLE = "Task Test"
+        cls.CONTENT = "Task Test"
+        cls.upload_user = User.objects.create(username="Test User")
         for name in Team.TeamChoices.values:
             Team.objects.create(name=name)
 
-    def test_view_task(self):
-        # 비 로그인 유저가 조회
+    # def setUp(self):
+    #     print("Test Task View & Create")
+    #     self.TITLE = "Task Test"
+    #     self.CONTENT = "Task Test"
+    #     self.upload_user = User.objects.create(username="Test User")
+    #     for name in Team.TeamChoices.values:
+    #         Team.objects.create(name=name)
+
+    # 비 로그인 유저가 조회
+    def test_view_task_non_login_user(self):
         response = self.client.get(self.URL)
         self.assertEqual(response.status_code, 403, "비 로그인 조회")
 
-        # 로그인 유저가 조회
+    # 로그인 유저가 조회
+    def test_view_task_logged_in_user(self):
         self.client.force_login(self.upload_user)
-
         response = self.client.get(self.URL)
         self.assertEqual(response.status_code, 200, "로그인 후 조회")
 
-    def test_create_task(self):
-        # 비 로그인 유저가 생성
+    # 비 로그인 유저가 생성
+    def test_create_task_non_login_user(self):
         response = self.client.post(self.URL)
         self.assertEqual(response.status_code, 403, "비 로그인 업무 생성")
 
+    def test_create_task_blank_value(self):
         self.client.force_login(self.upload_user)
-
         response = self.client.post(self.URL)
         self.assertEqual(response.status_code, 400, "post 공백 값")
+        self.client.logout()
+
+    def test_create_task_check_typo(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -48,6 +61,10 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400, "오타 확인")
+        self.client.logout()
+
+    def test_create_task_without_team(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -58,17 +75,25 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400, "팀 없이 post 하는 경우")
+        self.client.logout()
+
+    def test_create_task_non_existing_team_name(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
             data={
                 "title": self.TITLE,
                 "content": self.CONTENT,
-                "team": "없는 팀",
+                "team": "No team",
             },
             format="json",
         )
         self.assertEqual(response.status_code, 404, "존재하지 않는 팀명")
+        self.client.logout()
+
+    def test_create_task_with_existing_team_name(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -79,13 +104,17 @@ class TestTask(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(response.json().get("title"), self.TITLE, "존재하지 않는 팀명")
+        self.assertEqual(response.json().get("title"), self.TITLE, "정상 삽입 확인")
         self.assertEqual(
             response.json().get("create_user").get("username"),
             self.upload_user.username,
-            "create user 테스트",
+            "create user test",
         )
-        self.assertEqual(response.status_code, 200, "존재하지 않는 팀명")
+        self.assertEqual(response.status_code, 200, "정상 삽입")
+        self.client.logout()
+
+    def test_create_task_with_diff_type_of_subtasks(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -98,6 +127,11 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400, "subtasks 의 자료형이 array 가 아닐때")
+        self.client.logout()
+
+    def test_create_task_with_wrong_value_of_subtasks(self):
+        self.client.force_login(self.upload_user)
+
         response = self.client.post(
             self.URL,
             data={
@@ -109,6 +143,10 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 404, "array 의 중간에 이상한 값이 들어올 때")
+        self.client.logout()
+
+    def test_create_task_with_corret_case_team_and_subtasks(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -121,6 +159,10 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 200, "정상적인 경우")
+        self.client.logout()
+
+    def test_create_task_with_corret_case_subtasks_without_team(self):
+        self.client.force_login(self.upload_user)
 
         response = self.client.post(
             self.URL,
@@ -132,10 +174,11 @@ class TestTask(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 200, "정상적인 경우")
+        self.client.logout()
 
 
 class TestTaskDetail(APITestCase):
-    # /tasks/{id} Test
+    # /tasks/{id} GET PUT
     URL = "/api/v1/tasks"
 
     def setUp(self):
@@ -316,84 +359,111 @@ class TestTaskDetail(APITestCase):
 
 
 class TestSubTaskDetail(APITestCase):
-    # /tasks/subtask/{id} Test
+    # /tasks/subtask/{id} GET PUT
 
     URL = "/api/v1/tasks/subtask"
 
-    def setUp(self):
-        print("Test SubTask Detail View & Edit")
+    # 기본 데이터들
+    @classmethod
+    def setUpTestData(cls):
         for name in Team.TeamChoices.values:
             Team.objects.create(name=name)
-        self.team = Team.objects.get(name="단비")
-        self.upload_user = User.objects.create(username="Test User", team=self.team)
-        self.task = Task.objects.create(
+        cls.team = Team.objects.get(name="단비")
+        cls.upload_user = User.objects.create(username="Test User", team=cls.team)
+        cls.task = Task.objects.create(
             title="Test Task",
             content="Test Task Content",
-            create_user=self.upload_user,
-            team=self.team,
+            create_user=cls.upload_user,
+            team=cls.team,
         )
-        self.subtask = SubTask.objects.create(task=self.task, team=self.team)
+        cls.subtask = SubTask.objects.create(task=cls.task, team=cls.team)
 
-    def test_view_subtask_detail(self):
-        # 비 로그인 유저가 조회
+    # 비 로그인 유저가 조회
+    def test_view_subtask_detail_unauthenticated(self):
+
         response = self.client.get(f"{self.URL}/{self.subtask.id}")
-        self.assertEqual(response.status_code, 403, "비 로그인 조회")
+        self.assertEqual(
+            response.status_code, 403, "Unauthenticated user cannot view subtask"
+        )
 
-        # 로그인 유저가 조회
+    # 로그인 유저가 조회
+    def test_view_subtask_detail_authenticated(self):
+
         self.client.force_login(self.upload_user)
 
         response = self.client.get(f"{self.URL}/{self.subtask.id}")
-        self.assertEqual(response.status_code, 200, "로그인 후 조회")
+        self.assertEqual(
+            response.status_code, 200, "Authenticated user can view subtask"
+        )
         self.assertEqual(
             response.json().get("pk"),
             self.subtask.id,
-            "원하는 데이터가 맞는지 확인",
+            "Wrong value",
         )
         self.assertEqual(
             response.json().get("is_complete"),
             self.subtask.is_complete,
-            "서브업무 완료 여부 확인",
+            "Wrong value",
         )
 
+        self.client.logout()
+
+    # 존재하지 않는 url 접근
+    def test_view_subtask_detail_nonexistent_id(self):
+        self.client.force_login(self.upload_user)
         response = self.client.get(f"{self.URL}/10")
         self.assertEqual(response.status_code, 404, "존재하지 않는 url")
 
-    def test_edit_subtask_detail(self):
+    def test_edit_subtask_detail_unauthenticated(self):
         response = self.client.put(
             f"{self.URL}/{self.subtask.id}",
             data={"is_complete": "true"},
             format="json",
         )
-        self.assertEqual(response.status_code, 403, "비 로그인 수정")
+        self.assertEqual(
+            response.status_code, 403, "Unauthenticated user cannot edit subtask"
+        )
+
+        self.client.logout()
+
+    def test_edit_subtask_detail_wrong_user(self):
         user = User.objects.create(username="OtherUser")
         self.client.force_login(user)
+
         response = self.client.put(
             f"{self.URL}/{self.subtask.id}",
             data={"title": "Change test"},
             format="json",
         )
-        self.assertEqual(response.status_code, 403, "로그인 (업로드 유저가 아닌 유저) 후 수정")
+        self.assertEqual(response.status_code, 403, "Wrong user cannot edit subtask")
 
         self.client.logout()
 
-        self.client.force_login(self.upload_user)
+    def test_edit_subtask_detail_authenticated(self):
 
-        self.assertEqual(
-            SubTask.objects.get(pk=self.subtask.pk).task.is_complete,
-            False,
-            "완료 전",
-        )
-        self.assertEqual(
-            SubTask.objects.get(pk=self.subtask.pk).task.completed_date,
-            None,
-            "완료 전",
-        )
+        self.client.force_login(self.upload_user)
         response = self.client.put(
             f"{self.URL}/{self.subtask.id}",
             data={"is_complete": "true"},
             format="json",
         )
         self.assertEqual(response.status_code, 200, "로그인 (업로드 유저) 후 수정")
+
+        self.client.logout()
+
+    def test_edit_subtask_detail_authenticated_complete(self):
+        self.client.force_login(self.upload_user)
+        self.assertEqual(
+            SubTask.objects.get(pk=self.subtask.pk).task.is_complete,
+            False,
+            "완료 전",
+        )
+        self.client.put(
+            f"{self.URL}/{self.subtask.id}",
+            data={"is_complete": "true"},
+            format="json",
+        )
+
         self.assertEqual(
             SubTask.objects.get(pk=self.subtask.pk).is_complete,
             True,
@@ -404,15 +474,32 @@ class TestSubTaskDetail(APITestCase):
             True,
             "완료 후",
         )
+
+        self.client.logout()
+
+    def test_edit_subtask_detail_authenticated_complete_date(self):
+        self.client.force_login(self.upload_user)
+        self.assertEqual(
+            SubTask.objects.get(pk=self.subtask.pk).task.completed_date,
+            None,
+            "완료 전 날짜",
+        )
+        self.client.put(
+            f"{self.URL}/{self.subtask.id}",
+            data={"is_complete": "true"},
+            format="json",
+        )
         self.assertEqual(
             bool(SubTask.objects.get(pk=self.subtask.pk).task.completed_date),
             True,
-            "완료 전",
+            "완료 후 날짜",
         )
+
+        self.client.logout()
 
 
 class TestViewMyTasks(APITestCase):
-    # /tasks/mytask Test
+    # /tasks/mytask GET
 
     URL = "/api/v1/tasks/mytask"
 
@@ -483,7 +570,7 @@ class TestViewMyTasks(APITestCase):
 
 
 class TestViewMyMainTasks(APITestCase):
-    # /tasks/mytask/main Test
+    # /tasks/mytask/main GET
 
     URL = "/api/v1/tasks/mytask/main"
 
@@ -553,7 +640,7 @@ class TestViewMyMainTasks(APITestCase):
 
 
 class TestViewMySubTasks(APITestCase):
-    # /tasks/mytask/sub Test
+    # /tasks/mytask/sub GET
 
     URL = "/api/v1/tasks/mytask/sub"
 
