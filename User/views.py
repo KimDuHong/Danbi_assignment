@@ -90,9 +90,7 @@ class SignUp(APIView):
         serializer = PrivateUserSerializer(data=request.data)
         if serializer.is_valid():
             with transaction.atomic():
-                # self.validate_password(password)
-                print(team)
-                print(Team.objects.filter(name=team))
+                self.validate_password(password)
                 user = serializer.save()
                 user.team = get_object_or_404(Team, name=team)
                 user.set_password(password)
